@@ -19,7 +19,7 @@ namespace :nginx do
 
   desc "Recompiles NGINX"
   task :compile do
-    sh "script/compile"
+    sh "script/bootstrap compile"
   end
 end
 
