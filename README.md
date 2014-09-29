@@ -1,4 +1,4 @@
-# ngx_shellshocked
+# ngx_shellshocked [![Build Status](https://secure.travis-ci.org/abedra/ngx_shellshocked.png)](http://travis-ci.org/abedra/ngx_shellshocked?branch=master)
 
 This project is an NGINX module designed to block the
 [Shellshocked](https://www.us-cert.gov/ncas/alerts/TA14-268A) payload
