@@ -10,7 +10,7 @@ describe "Integration Specs" do
       expect(http.response_code).to eq(403)
     end
 
-    it "Returns 400 when shellshocked payload is in host" do
+    it "Returns 403 when shellshocked payload is in host" do
       http = Curl.get("http://127.0.0.1:8888") do |http|
         http.headers['Host'] = "() { :; }; echo foo"
       end
@@ -18,5 +18,12 @@ describe "Integration Specs" do
       expect(http.response_code).to eq(403)
     end
 
+    it "Returns 403 when a custom header is used with the payload" do
+      http = Curl.get("http://127.0.0.1:8888") do |http|
+        http.headers['Custom'] = "() { :; }; echo foo"
+      end
+
+      expect(http.response_code).to eq(403)
+    end
   end
 end

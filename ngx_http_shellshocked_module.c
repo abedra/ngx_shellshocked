@@ -3,6 +3,8 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#define TRUE 1
+#define FALSE 0
 
 ngx_module_t ngx_http_shellshocked_module;
 
@@ -13,13 +15,46 @@ typedef struct {
 
 
 static ngx_int_t
-shellshocked_payload_present(ngx_str_t value)
+shellshocked_payload_present(ngx_table_elt_t *h)
 {
-  if (memcmp(value.data, "() {", 4) == 0) {
-    return NGX_ERROR;
+  if (memcmp(h->value.data, "() {", 4) == 0) {
+    return TRUE;
   } else {
-    return NGX_DECLINED;
+    return FALSE;
   }
+}
+
+
+static ngx_int_t
+check_headers(ngx_http_request_t *r)
+{
+  ngx_list_part_t *part;
+  ngx_table_elt_t *h;
+  ngx_uint_t i;
+
+  part = &r->headers_in.headers.part;
+  h = part->elts;
+
+  for (i = 0; /**/; i++) {
+    if (i >= part->nelts) {
+      if (part->next == NULL) {
+        break;
+      }
+
+      part = part->next;
+      h = part->elts;
+      i = 0;
+    }
+
+    if (shellshocked_payload_present(&h[i])) {
+      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+		    "[shellshocked] blocking header %s with value: %s",
+		    h[i].key.data, h[i].value.data);
+      return NGX_ERROR;
+    }
+  }
+
+  return NGX_DECLINED;
 }
 
 
@@ -32,20 +67,9 @@ ngx_http_shellshocked_handler(ngx_http_request_t *r)
     return NGX_DECLINED;
   }
 
-  if (r->headers_in.referer != NULL) {
-    ngx_int_t result = shellshocked_payload_present(r->headers_in.referer->value);
-    if (result == NGX_ERROR) {
-      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[shellshocked] Blocking shellshocked payload in referer");
-      return NGX_HTTP_FORBIDDEN;
-    }
-  }
-
-  if (r->headers_in.host != NULL) {
-    ngx_int_t result = shellshocked_payload_present(r->headers_in.host->value);
-    if (result == NGX_ERROR) {
-      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[shellshocked] Blocking shellshocked payload in host");
-      return NGX_HTTP_FORBIDDEN;
-    }
+  ngx_int_t result = check_headers(r);
+  if (result == NGX_ERROR) {
+    return NGX_HTTP_FORBIDDEN;
   }
 
   return NGX_OK;
